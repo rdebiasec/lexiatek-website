@@ -1,0 +1,42 @@
+# Keeps a private mirror of this repository on GitHub (DR backup).
+# Only runs for pushes to main (and manual dispatch). Does not deploy the website.
+# Requires secret BACKUP_GITHUB_TOKEN and private repo lexiatek-website-backup.
+name: Mirror to backup
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mirror-backup
+  cancel-in-progress: true
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mirror repository to lexiatek-website-backup
+        env:
+          BACKUP_TOKEN: ${{ secrets.BACKUP_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BACKUP_TOKEN}" ]; then
+            echo "Missing secret BACKUP_GITHUB_TOKEN — skipping mirror (configure when ready)."
+            exit 0
+          fi
+
+          SRC="https://x-access-token:${BACKUP_TOKEN}@github.com/rdebiasec/lexiatek-website.git"
+          DST="https://x-access-token:${BACKUP_TOKEN}@github.com/rdebiasec/lexiatek-website-backup.git"
+
+          git clone --mirror "${SRC}" mirror.git
+          cd mirror.git
+          git remote set-url --push origin "${DST}"
+          git config --unset-all remote.origin.mirror || true
+
+          git push origin --force --prune '+refs/heads/*:refs/heads/*' '+refs/tags/*:refs/tags/*'
+          echo "Mirror push complete"

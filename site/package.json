@@ -1,0 +1,16 @@
+{
+  "name": "lexiatek-web-template",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5195 --strictPort",
+    "build": "npm run build:static",
+    "build:static": "node scripts/generate-seo.mjs && vite build && node scripts/check-dist.mjs",
+    "preview": "vite preview --port 5195 --strictPort",
+    "audit": "npm audit --audit-level=high"
+  },
+  "devDependencies": {
+    "vite": "^8.0.16"
+  }
+}
