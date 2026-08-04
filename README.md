@@ -1,7 +1,7 @@
-# LexiaTek Web Template
+# LexiaTek Website
 
-Local workspace for **Firma1 de Abogados LexiaTek**.  
-GitHub production repo: **`lexiatek-website`**.
+Carpeta local: **`/Users/ricardodebiase/Documents/lexiatek-website`**  
+Repo GitHub: **`https://github.com/rdebiasec/lexiatek-website`**
 
 | Layer | Source |
 |-------|--------|

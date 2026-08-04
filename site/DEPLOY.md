@@ -8,8 +8,8 @@
 |-------------|-----|-------------|
 | **Dev (local)** | http://localhost:5195/ | `cd site && npm run dev` |
 | **Prod (GitHub Pages)** | https://rdebiasec.github.io/lexiatek-website/ | Push to `main` → GitHub Actions → Pages |
-| **Local folder name** | `lexiatek-web-template` | Development workspace |
-| **GitHub repo name** | `lexiatek-website` | Production remote |
+| **Local folder** | `/Users/ricardodebiase/Documents/lexiatek-website` | Única carpeta de trabajo |
+| **GitHub repo** | `lexiatek-website` | https://github.com/rdebiasec/lexiatek-website |
 
 There is **no separate staging Pages** environment in this phase. Prod-like checks locally:
 
@@ -43,25 +43,25 @@ When ready:
 ## Hierarchy (Pixel-aligned)
 
 ```
-lexiatek-web-template/          # local workspace
+lexiatek-website/                   # carpeta local (única)
 ├── .github/
 │   ├── dependabot.yml
 │   └── workflows/
-│       ├── deploy.yml          # GitHub Pages
-│       └── mirror-backup.yml   # optional DR (needs BACKUP_GITHUB_TOKEN)
+│       ├── deploy.yml
+│       └── mirror-backup.yml
 ├── .gitignore
 ├── README.md
-├── deploy2github.sh            # bootstrap remote (optional)
+├── deploy2github.sh
 └── site/
     ├── .env.example
     ├── .gitignore
-    ├── DEPLOY.md               # this file
+    ├── DEPLOY.md
     ├── index.html
     ├── package.json
     ├── vite.config.js
-    ├── public/                 # robots, sitemap, favicon, .nojekyll
-    ├── scripts/                # generate-seo, check-dist
-    └── src/                    # main, style, forms, security, legal
+    ├── public/
+    ├── scripts/
+    └── src/
 ```
 
 ## First-time GitHub publish

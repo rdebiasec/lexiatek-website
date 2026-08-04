@@ -4,3 +4,4 @@ dist
 *.local
 .env
 .cursor/
+_archivo-borrador-html/
