@@ -88,6 +88,12 @@ When you have a domain, add `site/public/CNAME` and the workflow switches to `/`
 - Form honeypot `_gotcha`; Formspree ID validated client-side
 - True HTTP headers (HSTS, X-Frame-Options) need Cloudflare Transform Rules (manual)
 
+## Disaster recovery (Pixel pattern)
+
+- Private mirror: [`lexiatek-website-backup`](https://github.com/rdebiasec/lexiatek-website-backup)
+- Workflow: `.github/workflows/mirror-backup.yml` on every push to `main`
+- Secret: `BACKUP_GITHUB_TOKEN` (configured)
+
 ## Rollback
 
 Redeploy previous commit via `workflow_dispatch` or revert on `main`.
