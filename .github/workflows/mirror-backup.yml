@@ -26,8 +26,8 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${BACKUP_TOKEN}" ]; then
-            echo "Missing secret BACKUP_GITHUB_TOKEN — skipping mirror (configure when ready)."
-            exit 0
+            echo "Missing secret BACKUP_GITHUB_TOKEN"
+            exit 1
           fi
 
           SRC="https://x-access-token:${BACKUP_TOKEN}@github.com/rdebiasec/lexiatek-website.git"
