@@ -8,3 +8,5 @@ _archivo-borrador-html/
 intake-api/.venv/
 intake-api/data/
 intake-api/*.egg-info/
+intake-api/**/__pycache__/
+intake-api/**/*.pyc
