@@ -606,9 +606,8 @@ a {
   color: var(--text-body);
 }
 
-/* ——— Cards / agents / benefits ——— */
+/* ——— Cards / benefits ——— */
 .services-grid,
-.agents-grid,
 .benefits-grid,
 .trust-grid,
 .pricing-grid {
