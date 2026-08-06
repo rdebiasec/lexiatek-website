@@ -1,99 +1,63 @@
 # LexiaTek — Deployment
 
-> **Agent note — "deploy" terminology:** When the user says **"deploy"** in casual conversation about this template, clarify whether they mean **local dev** (`cd site && npm run dev` → http://localhost:5195/) or **GitHub Pages production**. Never push to GitHub or production without explicit approval.
+> **Agent note — "deploy":** clarify **local** (`npm run dev` → :5195) vs **GitHub Pages**. Never push without approval.
 
 ## Environment map
 
-| Environment | URL | How it runs |
-|-------------|-----|-------------|
-| **Dev (local)** | http://localhost:5195/ | `cd site && npm run dev` |
-| **Prod (GitHub Pages)** | https://rdebiasec.github.io/lexiatek-website/ | Push to `main` → GitHub Actions → Pages |
-| **Local folder** | `/Users/ricardodebiase/Documents/lexiatek-website` | Única carpeta de trabajo |
-| **GitHub repo** | `lexiatek-website` | https://github.com/rdebiasec/lexiatek-website |
+| Environment | URL | How |
+|-------------|-----|-----|
+| **Dev** | http://localhost:5195/ | `cd site && npm run dev` |
+| **Prod (hosting hoy)** | https://rdebiasec.github.io/lexiatek-website/ | Push `main` → Actions → Pages |
+| **SEO / marca** | https://lexiatek.com (www → apex cuando DNS esté listo) | Canonical/OG ya apuntan aquí |
+| **Intake API** | Render (`lexiatek-intake-api`) | `intake-api/render.yaml` |
 
-There is **no separate staging Pages** environment in this phase. Prod-like checks locally:
+## Leads (HubSpot — sin Formspree)
 
-```bash
-cd site
-npm run build
-npm run preview
-```
+1. En HubSpot Starter: crear form con campos alineados (`firstname`, `email`, `phone`, `whatsapp`, `rol_lexiatek`, `resumen_consulta`, `consentimiento_datos`, `fuente`).
+2. Copiar **Portal ID** y **Form GUID**.
+3. Local: `site/.env` → `VITE_HUBSPOT_PORTAL_ID` + `VITE_HUBSPOT_FORM_ID`
+4. GitHub Actions secrets: mismos nombres.
+5. Workflow notify a `ricardo.debiase@dbx-solutions.com`.
 
-## Local development
+Docs form submit API: https://developers.hubspot.com/docs/api-reference/legacy/forms-v3-legacy/guide
 
-```bash
-cd site
-npm install   # once
-npm run dev
-```
-
-Open **http://localhost:5195/** (port 5195, fixed to avoid conflicts with Pixel on 5180).
-
-### Lead form (Formspree)
-
-Until `VITE_FORMSPREE_FORM_ID` is set, submit shows a clear error — never fake success.
-
-When ready:
-
-1. Create a form at https://formspree.io
-2. Set `VITE_FORMSPREE_FORM_ID` in `site/.env` (local)
-3. Add the same value as Actions secret `VITE_FORMSPREE_FORM_ID`
-4. Smoke-test the contact form
-
-## Hierarchy (Pixel-aligned)
-
-```
-lexiatek-website/                   # carpeta local (única)
-├── .github/
-│   ├── dependabot.yml
-│   └── workflows/
-│       ├── deploy.yml
-│       └── mirror-backup.yml
-├── .gitignore
-├── README.md
-├── deploy2github.sh
-└── site/
-    ├── .env.example
-    ├── .gitignore
-    ├── DEPLOY.md
-    ├── index.html
-    ├── package.json
-    ├── vite.config.js
-    ├── public/
-    ├── scripts/
-    └── src/
-```
-
-## First-time GitHub publish
+## Widget intake (Render)
 
 ```bash
-# From repo root (preferred with gh CLI):
-gh repo create lexiatek-website --public --source=. --remote=origin --push
-
-# Or:
-./deploy2github.sh
+cd intake-api
+cp .env.example .env   # OPENAI_API_KEY, HUBSPOT_ACCESS_TOKEN, HUBSPOT_DRY_RUN=false
+# Deploy via Render blueprint or dashboard (rootDir: intake-api)
 ```
 
-Then: **Settings → Pages → Source: GitHub Actions**.
+Set secret `VITE_INTAKE_API_URL=https://<servicio>.onrender.com` so Pages habla con Render (CSP se genera en build).
 
-Without a custom domain, the workflow sets `VITE_BASE_PATH=/lexiatek-website/`.
+Checklist CRM: [`intake-api/HUBSPOT_SETUP.md`](../intake-api/HUBSPOT_SETUP.md)
 
-When you have a domain, add `site/public/CNAME` and the workflow switches to `/`.
+## WhatsApp CTA
 
-## Security notes
+Dejar `VITE_WHATSAPP_URL` vacío → botón “WhatsApp (próximamente)” apunta a `#contacto`.  
+Cuando tengas número: `https://wa.me/57XXXXXXXXXX` en secret + redeploy.
 
-- CSP + Referrer-Policy + Permissions-Policy injected by `scripts/generate-seo.mjs`
-- `check-dist.mjs` fails the build if CSP / canonical / JSON-LD are missing
-- CI: `npm audit --audit-level=high`, SHA-pinned Actions
-- Form honeypot `_gotcha`; Formspree ID validated client-side
-- True HTTP headers (HSTS, X-Frame-Options) need Cloudflare Transform Rules (manual)
+## Dominio lexiatek.com
 
-## Disaster recovery (Pixel pattern)
+Cuando DNS esté listo:
 
-- Private mirror: [`lexiatek-website-backup`](https://github.com/rdebiasec/lexiatek-website-backup)
-- Workflow: `.github/workflows/mirror-backup.yml` on every push to `main`
-- Secret: `BACKUP_GITHUB_TOKEN` (configured)
+1. Añadir `site/public/CNAME` con `lexiatek.com`
+2. Configurar DNS + redirect `www` → apex
+3. Redeploy (workflow pondrá `VITE_BASE_PATH=/`)
 
-## Rollback
+Hasta entonces el sitio se sirve en github.io; SEO canónico sigue siendo `https://lexiatek.com/`.
 
-Redeploy previous commit via `workflow_dispatch` or revert on `main`.
+## Security
+
+- CSP + honeypot + HubSpot Forms API
+- `npm audit --audit-level=high` en CI
+- Mirror privado: `BACKUP_GITHUB_TOKEN`
+
+## Local
+
+```bash
+cd site && npm install && npm run dev
+# API widget (otra terminal):
+cd intake-api && .venv/bin/uvicorn src.main:app --reload --port 8787
+```

@@ -7,6 +7,29 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = resolve(__dirname, '..')
 const publicDir = resolve(root, 'public')
 
+function intakeConnectHosts() {
+  const hosts = new Set([
+    "'self'",
+    'https://api.hsforms.com',
+    'https://js.hsforms.net',
+    'https://forms.hubspot.com'
+  ])
+  const intake = (process.env.VITE_INTAKE_API_URL || '').replace(/\/$/, '')
+  if (intake.startsWith('https://') || intake.startsWith('http://')) {
+    try {
+      hosts.add(new URL(intake).origin)
+    } catch {
+      /* ignore bad URL */
+    }
+  }
+  // Local widget only in non-production builds
+  if (process.env.NODE_ENV !== 'production') {
+    hosts.add('http://127.0.0.1:8787')
+    hosts.add('http://localhost:8787')
+  }
+  return [...hosts].join(' ')
+}
+
 function buildCsp() {
   return [
     "default-src 'self'",
@@ -16,8 +39,8 @@ function buildCsp() {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
     "script-src 'self'",
-    "connect-src 'self' https://formspree.io",
-    "form-action 'self' https://formspree.io",
+    `connect-src ${intakeConnectHosts()}`,
+    "form-action 'self' https://api.hsforms.com https://forms.hubspot.com",
     "frame-ancestors 'none'",
     'upgrade-insecure-requests'
   ].join('; ')
@@ -34,7 +57,8 @@ function legalServiceSchema() {
       '@type': 'Country',
       name: 'Colombia'
     },
-    availableLanguage: ['es']
+    availableLanguage: ['es'],
+    sameAs: ['https://www.lexiatek.com']
   }
 }
 
@@ -48,11 +72,13 @@ function buildSeoBlock() {
     '    <meta name="referrer" content="strict-origin-when-cross-origin" />',
     '    <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=()" />',
     `    <link rel="canonical" href="${canonical}" />`,
+    `    <link rel="alternate" href="https://www.lexiatek.com/" />`,
     `    <meta property="og:title" content="${META.title}" />`,
     `    <meta property="og:description" content="${META.description}" />`,
     `    <meta property="og:url" content="${canonical}" />`,
     '    <meta property="og:type" content="website" />',
     `    <meta property="og:site_name" content="${COMPANY_LEGAL_NAME}" />`,
+    `    <meta property="og:locale" content="es_CO" />`,
     '    <meta name="twitter:card" content="summary_large_image" />',
     `    <meta name="twitter:title" content="${META.title}" />`,
     `    <meta name="twitter:description" content="${META.description}" />`,
@@ -60,13 +86,13 @@ function buildSeoBlock() {
   ].join('\n')
 }
 
-async function patchIndexHtml() {
-  const indexPath = resolve(root, 'index.html')
+async function patchHtml(fileName) {
+  const indexPath = resolve(root, fileName)
   let html = await readFile(indexPath, 'utf8')
   const block = `  <!-- seo:generated -->\n${buildSeoBlock()}\n  <!-- /seo:generated -->`
   if (html.includes('<!-- seo:generated -->')) {
     html = html.replace(/<!-- seo:generated -->[\s\S]*?<!-- \/seo:generated -->/, block.trim())
-  } else {
+  } else if (html.includes('</head>')) {
     html = html.replace('</head>', `${block}\n</head>`)
   }
   await writeFile(indexPath, html, 'utf8')
@@ -81,14 +107,28 @@ async function writePublicSeo() {
   )
   await writeFile(
     resolve(publicDir, 'sitemap.xml'),
-    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url>\n    <loc>${SITE_URL}/</loc>\n    <changefreq>weekly</changefreq>\n    <priority>1.0</priority>\n  </url>\n</urlset>\n`,
+    `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>${SITE_URL}/</loc></url>
+  <url><loc>${SITE_URL}/privacidad.html</loc></url>
+  <url><loc>${SITE_URL}/terminos.html</loc></url>
+  <url><loc>${SITE_URL}/tratamiento-datos.html</loc></url>
+</urlset>
+`,
     'utf8'
   )
 }
 
 async function main() {
+  await patchHtml('index.html')
+  for (const page of ['privacidad.html', 'terminos.html', 'tratamiento-datos.html']) {
+    try {
+      await patchHtml(page)
+    } catch {
+      /* page may not exist yet on first run */
+    }
+  }
   await writePublicSeo()
-  await patchIndexHtml()
   console.log('generate-seo: CSP, OG, JSON-LD, robots, sitemap OK')
 }
 

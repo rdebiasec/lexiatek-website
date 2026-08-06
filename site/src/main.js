@@ -1,5 +1,8 @@
 import './style.css'
+import './widget/intake-widget.css'
 import { bindLeadForm } from './forms/lead-form.js'
+import { bindIntakeWidget } from './widget/intake-widget.js'
+import { bindWhatsAppCtas } from './whatsapp-cta.js'
 
 function initNav() {
   const toggle = document.querySelector('.nav-toggle')
@@ -59,4 +62,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initYear()
   initReveal()
   bindLeadForm(document.querySelector('.contact-form'))
+  bindIntakeWidget()
+  bindWhatsAppCtas()
 })

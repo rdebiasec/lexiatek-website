@@ -5,3 +5,6 @@ dist
 .env
 .cursor/
 _archivo-borrador-html/
+intake-api/.venv/
+intake-api/data/
+intake-api/*.egg-info/

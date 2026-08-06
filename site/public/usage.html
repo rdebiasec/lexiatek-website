@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es-CO">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>LexiaTek — Uso de tokens (intake)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #e6eef7;
+      --card: #fff;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --accent: #2563eb;
+      --border: #d5e0eb;
+    }
+    body {
+      margin: 0;
+      font-family: Lato, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      padding: 24px;
+    }
+    h1 { font-family: Poppins, sans-serif; font-size: 1.4rem; margin: 0 0 8px; }
+    p { color: var(--muted); margin: 0 0 16px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      max-width: 720px;
+    }
+    label { display: block; font-size: 0.85rem; margin-bottom: 4px; }
+    input, select, button {
+      font: inherit;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      margin-bottom: 10px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      font-family: Poppins, sans-serif;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 0.9rem; }
+    th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); }
+    .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 12px; }
+    .stat { background: #f8fafc; border-radius: 8px; padding: 12px; }
+    .stat strong { display: block; font-size: 1.2rem; }
+    .err { color: #b91c1c; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Reportería de tokens — intake</h1>
+    <p>USD + COP estimados desde el Agents SDK. Token = <code>USAGE_ADMIN_TOKEN</code> del API.</p>
+    <label for="api">Intake API base URL</label>
+    <input id="api" value="http://127.0.0.1:8787" />
+    <label for="token">Admin token</label>
+    <input id="token" type="password" autocomplete="off" />
+    <label for="days">Días</label>
+    <select id="days">
+      <option value="1">1</option>
+      <option value="7" selected>7</option>
+      <option value="30">30</option>
+    </select>
+    <button type="button" id="load">Cargar</button>
+    <p id="err" class="err" hidden></p>
+    <div class="stats" id="stats" hidden>
+      <div class="stat"><span>Runs</span><strong id="s-runs">0</strong></div>
+      <div class="stat"><span>Tokens</span><strong id="s-tok">0</strong></div>
+      <div class="stat"><span>USD est.</span><strong id="s-usd">0</strong></div>
+      <div class="stat"><span>COP est.</span><strong id="s-cop">0</strong></div>
+    </div>
+    <table id="top" hidden>
+      <thead><tr><th>Conversación</th><th>Runs</th><th>Tokens</th><th>COP</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <script>
+    document.getElementById('load').addEventListener('click', async () => {
+      const api = document.getElementById('api').value.replace(/\/$/, '')
+      const token = document.getElementById('token').value
+      const days = document.getElementById('days').value
+      const err = document.getElementById('err')
+      err.hidden = true
+      try {
+        const res = await fetch(`${api}/v1/usage?days=${days}&token=${encodeURIComponent(token)}`)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const data = await res.json()
+        document.getElementById('stats').hidden = false
+        document.getElementById('s-runs').textContent = data.runs
+        document.getElementById('s-tok').textContent = data.total_tokens
+        document.getElementById('s-usd').textContent = data.estimated_cost_usd
+        document.getElementById('s-cop').textContent = data.estimated_cost_cop
+        const tbody = document.querySelector('#top tbody')
+        tbody.innerHTML = ''
+        ;(data.top_conversations || []).forEach((row) => {
+          const tr = document.createElement('tr')
+          tr.innerHTML = `<td>${row.conversation_id}</td><td>${row.runs}</td><td>${row.total_tokens}</td><td>${row.estimated_cost_cop.toFixed?.(2) ?? row.estimated_cost_cop}</td>`
+          tbody.appendChild(tr)
+        })
+        document.getElementById('top').hidden = false
+      } catch (e) {
+        err.textContent = e.message || 'Error'
+        err.hidden = false
+      }
+    })
+  </script>
+</body>
+</html>

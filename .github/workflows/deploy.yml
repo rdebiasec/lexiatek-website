@@ -67,7 +67,10 @@ jobs:
         env:
           NODE_ENV: production
           VITE_BASE_PATH: ${{ steps.check_domain.outputs.base_path }}
-          VITE_FORMSPREE_FORM_ID: ${{ secrets.VITE_FORMSPREE_FORM_ID }}
+          VITE_HUBSPOT_PORTAL_ID: ${{ secrets.VITE_HUBSPOT_PORTAL_ID }}
+          VITE_HUBSPOT_FORM_ID: ${{ secrets.VITE_HUBSPOT_FORM_ID }}
+          VITE_INTAKE_API_URL: ${{ secrets.VITE_INTAKE_API_URL }}
+          VITE_WHATSAPP_URL: ${{ secrets.VITE_WHATSAPP_URL }}
         run: npm run build
 
       - name: Verify CSP in dist

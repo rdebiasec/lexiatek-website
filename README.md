@@ -1,14 +1,11 @@
 # LexiaTek Website
 
-Carpeta local: **`/Users/ricardodebiase/Documents/lexiatek-website`**  
-Repo GitHub: **`https://github.com/rdebiasec/lexiatek-website`**
+Carpeta: `/Users/ricardodebiase/Documents/lexiatek-website`  
+Repo: https://github.com/rdebiasec/lexiatek-website  
+Marca / SEO: **https://lexiatek.com** (www redirige al apex cuando el DNS esté listo)  
+Hosting actual: https://rdebiasec.github.io/lexiatek-website/
 
-| Layer | Source |
-|-------|--------|
-| Visual | Aegis (Poppins/Lato, navy + blue/cyan) |
-| Chassis | Pixel hierarchy (Vite `site/`, CSP, Formspree, CI Pages) |
-
-## Quick start (dev)
+## Quick start
 
 ```bash
 cd site
@@ -18,7 +15,14 @@ npm run dev
 
 → http://localhost:5195/
 
-## Docs
+## Producto
 
-- Deployment / GitHub Pages: [`site/DEPLOY.md`](site/DEPLOY.md)
-- Bootstrap remote: [`deploy2github.sh`](deploy2github.sh)
+| Pieza | Detalle |
+|-------|---------|
+| Landing | Vite + Aegis visual + CSP |
+| Form leads | HubSpot Forms API (no Formspree) |
+| Chat intake | Widget → API en Render (`intake-api/`) |
+| Legales | `privacidad.html`, `terminos.html`, `tratamiento-datos.html` |
+| WhatsApp CTA | Placeholder hasta configurar número |
+
+Ver [`site/DEPLOY.md`](site/DEPLOY.md) y [`intake-api/HUBSPOT_SETUP.md`](intake-api/HUBSPOT_SETUP.md).

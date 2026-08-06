@@ -1,0 +1,33 @@
+# Blueprint Render — LexiaTek intake API
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: lexiatek-intake-api
+    runtime: python
+    plan: starter
+    region: oregon
+    branch: main
+    rootDir: intake-api
+    buildCommand: pip install -e .
+    startCommand: uvicorn src.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"
+      - key: HUBSPOT_DRY_RUN
+        value: "false"
+      - key: OPENAI_MODEL
+        value: gpt-4.1-mini
+      - key: USD_TO_COP
+        value: "4100"
+      - key: NOTIFY_EMAIL
+        value: ricardo.debiase@dbx-solutions.com
+      - key: CORS_ORIGINS
+        value: https://rdebiasec.github.io,https://lexiatek.com,http://localhost:5195
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: HUBSPOT_ACCESS_TOKEN
+        sync: false
+      - key: USAGE_ADMIN_TOKEN
+        sync: false

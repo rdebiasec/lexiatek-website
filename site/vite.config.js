@@ -19,7 +19,10 @@ export default defineConfig(({ mode }) => {
     build: {
       rollupOptions: {
         input: {
-          main: resolve(__dirname, 'index.html')
+          main: resolve(__dirname, 'index.html'),
+          privacidad: resolve(__dirname, 'privacidad.html'),
+          terminos: resolve(__dirname, 'terminos.html'),
+          tratamiento: resolve(__dirname, 'tratamiento-datos.html')
         }
       }
     },

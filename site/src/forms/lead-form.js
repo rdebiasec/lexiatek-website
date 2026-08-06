@@ -1,16 +1,25 @@
 import { CONTACT_EMAIL } from '../legal/constants.js'
 
-const FORMSPREE_ID_PATTERN = /^[A-Za-z0-9]+$/
+const ID_PATTERN = /^[A-Za-z0-9-]+$/
 
-function isValidFormspreeId(formId) {
-  return typeof formId === 'string' && FORMSPREE_ID_PATTERN.test(formId)
+function validId(value) {
+  return typeof value === 'string' && ID_PATTERN.test(value)
 }
 
+/**
+ * Submit styled form to HubSpot Forms API (no Formspree).
+ * Docs: https://developers.hubspot.com/docs/api-reference/legacy/forms-v3-legacy/guide
+ */
 export function bindLeadForm(form) {
   if (!form) return
 
-  const rawFormId = import.meta.env.VITE_FORMSPREE_FORM_ID
-  const formId = isValidFormspreeId(rawFormId) ? rawFormId : ''
+  const portalId = validId(import.meta.env.VITE_HUBSPOT_PORTAL_ID)
+    ? import.meta.env.VITE_HUBSPOT_PORTAL_ID
+    : ''
+  const formId = validId(import.meta.env.VITE_HUBSPOT_FORM_ID)
+    ? import.meta.env.VITE_HUBSPOT_FORM_ID
+    : ''
+
   const status = form.querySelector('.form-status')
   const ok = form.querySelector('.form-confirmation')
   const err = form.querySelector('.form-error')
@@ -43,9 +52,9 @@ export function bindLeadForm(form) {
 
     if (!form.reportValidity()) return
 
-    if (!formId) {
+    if (!portalId || !formId) {
       showError(
-        `El formulario aún no está conectado. Escríbanos a ${CONTACT_EMAIL} o configure VITE_FORMSPREE_FORM_ID en desarrollo.`
+        `El formulario aún no está conectado a HubSpot. Escríbanos a ${CONTACT_EMAIL} o configure VITE_HUBSPOT_PORTAL_ID y VITE_HUBSPOT_FORM_ID.`
       )
       return
     }
@@ -57,13 +66,37 @@ export function bindLeadForm(form) {
     }
 
     try {
-      const body = new FormData(form)
-      body.delete('_gotcha')
-      const response = await fetch(`https://formspree.io/f/${formId}`, {
-        method: 'POST',
-        body,
-        headers: { Accept: 'application/json' }
-      })
+      const fd = new FormData(form)
+      fd.delete('_gotcha')
+
+      const fields = [
+        { name: 'firstname', value: String(fd.get('nombre') || '') },
+        { name: 'email', value: String(fd.get('correo') || '') },
+        { name: 'phone', value: String(fd.get('telefono') || '') },
+        { name: 'whatsapp', value: String(fd.get('telefono') || '') },
+        { name: 'rol_lexiatek', value: String(fd.get('rol') || '') },
+        { name: 'resumen_consulta', value: String(fd.get('mensaje') || '') },
+        {
+          name: 'consentimiento_datos',
+          value: fd.get('consentimiento') ? 'true' : 'false'
+        },
+        { name: 'fuente', value: 'form_landing' }
+      ]
+
+      const response = await fetch(
+        `https://api.hsforms.com/submissions/v3/integration/submit/${portalId}/${formId}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fields,
+            context: {
+              pageUri: window.location.href,
+              pageName: document.title
+            }
+          })
+        }
+      )
 
       if (!response.ok) {
         throw new Error('send_failed')
