@@ -9,7 +9,7 @@ export const WHATSAPP_URL = ''
 export const DEFAULT_LOCALE = 'es-CO'
 
 export const META = {
-  title: 'LexiaTek | Asesoría penal accesible con IA y abogado humano en Colombia',
+  title: 'LexiaTek | Acceso a orientación penal sin que el costo sea la barrera',
   description:
-    'Firma1 de Abogados LexiaTek ofrece acompañamiento penal claro, rápido y asequible en Colombia. IA jurídica + revisión de abogado para víctimas, investigados y familias.'
+    'Firma1 de Abogados LexiaTek acerca la orientación penal a más colombianos: víctimas, investigados y familias. Abogado humano, proceso claro y honorarios al alcance — para que el precio no cierre la puerta a la ley.'
 }
