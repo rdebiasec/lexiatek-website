@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' http://127.0.0.1:8787 http://localhost:8787 https:; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'" />
   <title>LexiaTek — Uso de tokens (intake)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -62,7 +63,7 @@
 <body>
   <div class="card">
     <h1>Reportería de tokens — intake</h1>
-    <p>USD + COP estimados desde el Agents SDK. Token = <code>USAGE_ADMIN_TOKEN</code> del API.</p>
+    <p>USD + COP estimados desde el Agents SDK. Auth = header <code>Authorization: Bearer …</code> (nunca en la URL).</p>
     <label for="api">Intake API base URL</label>
     <input id="api" value="http://127.0.0.1:8787" />
     <label for="token">Admin token</label>
@@ -87,6 +88,11 @@
     </table>
   </div>
   <script>
+    function cell(text) {
+      const td = document.createElement('td')
+      td.textContent = text == null ? '' : String(text)
+      return td
+    }
     document.getElementById('load').addEventListener('click', async () => {
       const api = document.getElementById('api').value.replace(/\/$/, '')
       const token = document.getElementById('token').value
@@ -94,7 +100,9 @@
       const err = document.getElementById('err')
       err.hidden = true
       try {
-        const res = await fetch(`${api}/v1/usage?days=${days}&token=${encodeURIComponent(token)}`)
+        const res = await fetch(`${api}/v1/usage?days=${encodeURIComponent(days)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json()
         document.getElementById('stats').hidden = false
@@ -103,10 +111,15 @@
         document.getElementById('s-usd').textContent = data.estimated_cost_usd
         document.getElementById('s-cop').textContent = data.estimated_cost_cop
         const tbody = document.querySelector('#top tbody')
-        tbody.innerHTML = ''
+        tbody.replaceChildren()
         ;(data.top_conversations || []).forEach((row) => {
           const tr = document.createElement('tr')
-          tr.innerHTML = `<td>${row.conversation_id}</td><td>${row.runs}</td><td>${row.total_tokens}</td><td>${row.estimated_cost_cop.toFixed?.(2) ?? row.estimated_cost_cop}</td>`
+          const cop = row.estimated_cost_cop
+          const copText = typeof cop === 'number' && cop.toFixed ? cop.toFixed(2) : String(cop ?? '')
+          tr.appendChild(cell(row.conversation_id))
+          tr.appendChild(cell(row.runs))
+          tr.appendChild(cell(row.total_tokens))
+          tr.appendChild(cell(copText))
           tbody.appendChild(tr)
         })
         document.getElementById('top').hidden = false

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from typing import Any
@@ -11,6 +12,7 @@ from agents import Agent, Runner, function_tool
 from src.config import get_settings
 from src import hubspot_client as hs
 from src.pricing import estimate_cost_cop, estimate_cost_usd
+from src.sessions import sessions
 from src.usage_store import append_usage
 
 SYSTEM = """Eres el asistente de intake de Firma1 de Abogados LexiaTek (Colombia).
@@ -31,9 +33,10 @@ Flujo sugerido:
 Si solo pregunta genérica de FAQ → responde corto y NO crees CRM.
 Si pide estrategia procesal / “¿gano el caso?” → rehúsa y ofrece dejar datos para abogado.
 Nunca inventes honorarios fijos ni porcentajes de éxito.
+NUNCA pidas evidencias, documentos, chats, audios ni pruebas por este canal.
+Si el usuario intenta enviar pruebas, indícale que un abogado le indicará un canal seguro.
+Minimiza lo que guardas: resumen corto, sin narrativa procesal detallada.
 """
-
-_sessions: dict[str, list[dict[str, str]]] = {}
 
 
 def _usage_dict(usage: Any) -> dict[str, int]:
@@ -62,17 +65,19 @@ async def create_lead_in_hubspot(
         nombre: Nombre completo del lead.
         rol: victima | investigado | familiar | otro
         tipo_cliente: natural | juridica
-        resumen: Resumen breve de la consulta.
+        resumen: Resumen breve de la consulta (sin pruebas ni detalle íntimo).
         email: Correo (recomendado).
         whatsapp: Celular/WhatsApp.
         consentimiento: Debe ser True; el widget ya lo capturó.
     """
+    settings = get_settings()
     if not consentimiento:
         return json.dumps({"ok": False, "error": "Sin consentimiento no se escribe en CRM"})
     if not email and not whatsapp:
         return json.dumps({"ok": False, "error": "Falta email o WhatsApp"})
 
     first = (nombre or "").strip().split(" ", 1)[0]
+    resumen_safe = resumen.strip()[: settings.hubspot_resumen_max_chars]
     props = {
         "firstname": first or nombre,
         "lastname": (nombre.strip()[len(first) :].strip() if nombre else "") or "-",
@@ -81,32 +86,28 @@ async def create_lead_in_hubspot(
         "whatsapp": (whatsapp or "").strip(),
         "tipo_cliente": tipo_cliente.strip().lower(),
         "rol_lexiatek": rol.strip().lower(),
-        "resumen_consulta": resumen.strip()[:4000],
+        "resumen_consulta": resumen_safe,
         "consentimiento_datos": "true",
         "fuente": "widget_agente",
     }
-    # HubSpot may reject unknown custom props if not created yet — still attempt
     contact = await hs.create_or_update_contact({k: v for k, v in props.items() if v})
     contact_id = str(contact.get("id"))
     deal = await hs.create_deal_for_contact(
         contact_id=contact_id,
         dealname=f"Asesoría inicial — {nombre.strip()[:60]}",
-        resumen=resumen.strip(),
+        resumen=resumen_safe,
     )
-    await hs.add_note_to_contact(
-        contact_id=contact_id,
-        body=(
-            f"Lead widget LexiaTek\nRol: {rol}\nTipo: {tipo_cliente}\n"
-            f"WA: {whatsapp}\nEmail: {email}\n\n{resumen}"
-        ),
-    )
+    note_body = (
+        f"Lead widget LexiaTek\nRol: {rol}\nTipo: {tipo_cliente}\n"
+        f"WA: {whatsapp}\nEmail: {email}\n\n{resumen_safe}"
+    )[: settings.hubspot_note_max_chars]
+    await hs.add_note_to_contact(contact_id=contact_id, body=note_body)
     return json.dumps(
         {
             "ok": True,
             "contact_id": contact_id,
             "deal_id": deal.get("id"),
-            "dry_run": get_settings().hubspot_dry_run,
-            "notify": get_settings().notify_email,
+            "dry_run": settings.hubspot_dry_run,
         },
         ensure_ascii=False,
     )
@@ -128,6 +129,8 @@ async def run_intake_turn(
     consent: bool,
 ) -> dict[str, Any]:
     settings = get_settings()
+    empty_usage = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+
     if not consent:
         return {
             "reply": (
@@ -135,45 +138,95 @@ async def run_intake_turn(
                 "(Ley 1581). Márquela en el widget e intente de nuevo."
             ),
             "crm_written": False,
-            "usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+            "usage": empty_usage,
         }
 
-    history = _sessions.setdefault(conversation_id, [])
-    history.append({"role": "user", "content": message})
+    already = sessions.total_tokens(conversation_id)
+    if settings.agent_max_total_tokens > 0 and already >= settings.agent_max_total_tokens:
+        return {
+            "reply": (
+                "Se alcanzó el límite de esta conversación. "
+                "Por favor use el formulario de contacto o escriba a contacto@lexiatek.com."
+            ),
+            "crm_written": False,
+            "usage": empty_usage,
+            "budget_exhausted": True,
+        }
+
+    sessions.append(
+        conversation_id,
+        role="user",
+        content=message,
+        max_sessions=settings.session_max_conversations,
+        ttl_seconds=settings.session_ttl_seconds,
+        max_turns=settings.session_max_turns,
+    )
+    history = sessions.get_messages(conversation_id)
 
     if not settings.openai_api_key and not os.environ.get("OPENAI_API_KEY"):
-        # Offline stub for smoke without OpenAI
         reply = (
             "Modo local sin OPENAI_API_KEY: describa rol, resumen, nombre y WhatsApp/email. "
             "Cuando configure la API key, el agente creará el lead en HubSpot."
         )
-        history.append({"role": "assistant", "content": reply})
+        sessions.append(
+            conversation_id,
+            role="assistant",
+            content=reply,
+            max_sessions=settings.session_max_conversations,
+            ttl_seconds=settings.session_ttl_seconds,
+            max_turns=settings.session_max_turns,
+        )
         return {
             "reply": reply,
             "crm_written": False,
-            "usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+            "usage": empty_usage,
             "offline": True,
         }
 
     os.environ.setdefault("OPENAI_API_KEY", settings.openai_api_key)
     agent = _build_agent()
-    # Compact history for the runner
     prompt_parts = []
     for turn in history[-12:]:
         prompt_parts.append(f"{turn['role'].upper()}: {turn['content']}")
     prompt = "\n".join(prompt_parts)
 
-    result = await Runner.run(agent, prompt)
+    try:
+        result = await asyncio.wait_for(
+            Runner.run(agent, prompt),
+            timeout=settings.openai_timeout_seconds,
+        )
+    except asyncio.TimeoutError:
+        reply = (
+            "El asistente tardó demasiado en responder. "
+            "Intente de nuevo o use el formulario de contacto."
+        )
+        sessions.append(
+            conversation_id,
+            role="assistant",
+            content=reply,
+            max_sessions=settings.session_max_conversations,
+            ttl_seconds=settings.session_ttl_seconds,
+            max_turns=settings.session_max_turns,
+        )
+        return {
+            "reply": reply,
+            "crm_written": False,
+            "usage": empty_usage,
+            "timeout": True,
+        }
+
     usage = _usage_dict(getattr(getattr(result, "context_wrapper", None), "usage", None))
     reply = str(result.final_output or "").strip() or "Gracias. Un abogado de LexiaTek le contactará."
 
-    if settings.agent_max_total_tokens > 0 and usage["total_tokens"] > settings.agent_max_total_tokens:
-        reply += (
-            f"\n\n(Nota interna: este turno superó el presupuesto de "
-            f"{settings.agent_max_total_tokens} tokens.)"
-        )
-
-    history.append({"role": "assistant", "content": reply})
+    sessions.add_tokens(conversation_id, usage["total_tokens"])
+    sessions.append(
+        conversation_id,
+        role="assistant",
+        content=reply,
+        max_sessions=settings.session_max_conversations,
+        ttl_seconds=settings.session_ttl_seconds,
+        max_turns=settings.session_max_turns,
+    )
 
     cost_usd = estimate_cost_usd(
         model=settings.openai_model,
@@ -199,10 +252,7 @@ async def run_intake_turn(
         },
     )
 
-    crm_written = "contact_id" in reply.lower() or any(
-        "create_lead_in_hubspot" in str(getattr(i, "raw_item", i)) for i in (result.new_items or [])
-    )
-    # Better signal: inspect tool outputs in new_items
+    crm_written = False
     for item in result.new_items or []:
         raw = getattr(item, "output", None) or getattr(item, "raw_item", None)
         text = str(raw)

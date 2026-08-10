@@ -24,7 +24,21 @@ services:
       - key: NOTIFY_EMAIL
         value: ricardo.debiase@dbx-solutions.com
       - key: CORS_ORIGINS
-        value: https://rdebiasec.github.io,https://lexiatek.com,http://localhost:5195
+        value: https://rdebiasec.github.io,https://lexiatek.com
+      - key: ALLOW_INSECURE_DEFAULTS
+        value: "false"
+      - key: OPENAI_TIMEOUT_SECONDS
+        value: "60"
+      - key: CHAT_RATE_LIMIT_PER_MINUTE
+        value: "10"
+      - key: CHAT_RATE_LIMIT_PER_DAY
+        value: "200"
+      - key: SESSION_MAX_CONVERSATIONS
+        value: "500"
+      - key: SESSION_TTL_SECONDS
+        value: "3600"
+      - key: AGENT_MAX_TOTAL_TOKENS
+        value: "30000"
       - key: OPENAI_API_KEY
         sync: false
       - key: HUBSPOT_ACCESS_TOKEN

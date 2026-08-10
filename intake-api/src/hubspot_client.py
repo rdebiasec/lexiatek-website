@@ -19,6 +19,11 @@ class HubSpotError(RuntimeError):
     pass
 
 
+def _safe_error(action: str, status_code: int) -> HubSpotError:
+    """No incluir cuerpos de respuesta (pueden ecoar PII del request)."""
+    return HubSpotError(f"{action}: HTTP {status_code}")
+
+
 def _headers() -> dict[str, str]:
     settings = get_settings()
     if not settings.hubspot_access_token and not settings.hubspot_dry_run:
@@ -65,7 +70,7 @@ async def search_contact_by_email(email: str) -> dict[str, Any] | None:
             json=payload,
         )
         if r.status_code >= 400:
-            raise HubSpotError(f"search contact: {r.status_code} {r.text[:300]}")
+            raise _safe_error("search contact", r.status_code)
         results = r.json().get("results") or []
         return results[0] if results else None
 
@@ -103,7 +108,7 @@ async def create_or_update_contact(properties: dict[str, Any]) -> dict[str, Any]
                 json={"properties": properties},
             )
         if r.status_code >= 400:
-            raise HubSpotError(f"upsert contact: {r.status_code} {r.text[:400]}")
+            raise _safe_error("upsert contact", r.status_code)
         return r.json()
 
 
@@ -153,7 +158,7 @@ async def create_deal_for_contact(
                 json={"properties": props},
             )
             if r2.status_code >= 400:
-                raise HubSpotError(f"create deal: {r2.status_code} {r2.text[:400]}")
+                raise _safe_error("create deal", r2.status_code)
             deal = r2.json()
             await client.put(
                 f"{BASE}/crm/v4/objects/deals/{deal['id']}/associations/contacts/{contact_id}/deal_to_contact",
@@ -191,7 +196,7 @@ async def add_note_to_contact(*, contact_id: str, body: str) -> dict[str, Any]:
             },
         )
         if r.status_code >= 400:
-            raise HubSpotError(f"create note: {r.status_code} {r.text[:400]}")
+            raise _safe_error("create note", r.status_code)
         return r.json()
 
 
