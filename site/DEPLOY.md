@@ -33,10 +33,15 @@ Set secret `VITE_INTAKE_API_URL=https://<servicio>.onrender.com` so Pages habla 
 
 Checklist CRM: [`intake-api/HUBSPOT_SETUP.md`](../intake-api/HUBSPOT_SETUP.md)
 
-## WhatsApp CTA
+## WhatsApp API (Arquitectura A)
 
-Dejar `VITE_WHATSAPP_URL` vacío → botón “WhatsApp (próximamente)” apunta a `#contacto`.  
-Cuando tengas número: `https://wa.me/57XXXXXXXXXX` en secret + redeploy.
+Checklist completo: [`intake-api/WHATSAPP_SETUP.md`](../intake-api/WHATSAPP_SETUP.md)
+
+1. Meta WABA + número Business + BSP (Wati / Respond.io / similar) → sync HubSpot (`fuente=whatsapp`).
+2. **No** WhatsApp nativo HubSpot Professional.
+3. CTA landing: `VITE_WHATSAPP_URL=https://wa.me/57XXXXXXXXXX` en `site/.env` y secret de GitHub Actions → redeploy Pages.
+4. Vacío → botón “WhatsApp (próximamente)” apunta a `#contacto`.
+5. Privacidad 1581/2300: ver sección 0 del checklist; legales ya mencionan el canal.
 
 ## Dominio lexiatek.com
 
