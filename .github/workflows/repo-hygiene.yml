@@ -1,0 +1,26 @@
+# Repo hygiene — bloqueo de documentos Office / decks
+
+name: Repo hygiene
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  no-office-binaries:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e1148264d1491ea3190d4773cb1d9f8a2b1f14 # v4.4.0
+      - name: Fail if Office / presentation / PDF binaries are tracked
+        run: |
+          set -euo pipefail
+          bad=$(git ls-files | grep -Ei '\.(pptx?|docx?|xlsx?|pdf|key|odp|odt|ods|pages|numbers|zip|7z|rar)$' || true)
+          if [ -n "$bad" ]; then
+            echo "::error::Documentos binarios / Office no permitidos en el repo:"
+            echo "$bad"
+            echo "Genera o comparte por Google Drive. Ver docs/decks/README.md y .gitignore"
+            exit 1
+          fi
+          echo "OK: no hay Office/PDF trackeados."

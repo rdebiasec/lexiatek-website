@@ -10,3 +10,22 @@ intake-api/data/
 intake-api/*.egg-info/
 intake-api/**/__pycache__/
 intake-api/**/*.pyc
+
+# Office / presentation / binary docs — generate or share via Drive; never commit
+*.ppt
+*.pptx
+*.key
+*.odp
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.numbers
+*.pages
+*.pdf
+*.zip
+*.7z
+*.rar
+LexiaTek_*.pptx
+docs/decks/*.pptx
+docs/decks/*.pdf
