@@ -9,7 +9,7 @@ export const WHATSAPP_URL = ''
 export const DEFAULT_LOCALE = 'es-CO'
 
 export const META = {
-  title: 'LexiaTek | Acceso a orientación penal sin que el costo sea la barrera',
+  title: 'LexiaTek | Abogado honesto a su alcance, con IA que hace asequible la orientación penal',
   description:
-    'Firma1 de Abogados LexiaTek acerca la orientación penal a más colombianos: víctimas, investigados y familias. Abogado humano, proceso claro y honorarios al alcance — para que el precio no cierre la puerta a la ley.'
+    'Firma1 de Abogados LexiaTek: orientación penal asequible con IA y abogado humano para quien no puede pagar una firma tradicional. Costos claros, avance transparente — sin promesas vacías.'
 }
