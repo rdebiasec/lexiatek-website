@@ -12,7 +12,7 @@ jobs:
   no-office-binaries:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e1148264d1491ea3190d4773cb1d9f8a2b1f14 # v4.4.0
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.4.0
       - name: Fail if Office / presentation / PDF binaries are tracked
         run: |
           set -euo pipefail

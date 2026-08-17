@@ -16,6 +16,9 @@
 
 1. **API siempre en Render** (`lexiatek-intake-api`).
 2. **Sitio:** Render Static (`lexiatek-site`) es el destino preferido para unificar prod en Render.
+   - Build: `cd site && npm ci && npm run build` · Publish: `site/dist`
+   - Vite va en `dependencies` (no solo `devDependencies`): Render usa `NODE_ENV=production` y omite devDeps.
+   - Env: `VITE_BASE_PATH=/`, `VITE_INTAKE_API_URL=https://lexiatek-intake-api.onrender.com`, más HubSpot Vite secrets en el dashboard.
 3. **GitHub Pages** sigue desplegando como fallback hasta que `lexiatek.com` tenga TLS correcto hacia el origen elegido; luego se puede deshabilitar Pages en GitHub Settings.
 4. Cloudflare WAF: ver [`docs/DEFERRED_NEXT_WEEK.md`](../docs/DEFERRED_NEXT_WEEK.md).
 
