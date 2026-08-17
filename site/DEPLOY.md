@@ -1,68 +1,67 @@
 # LexiaTek — Deployment
 
-> **Agent note — "deploy":** clarify **local** (`npm run dev` → :5195) vs **GitHub Pages**. Never push without approval.
+> **Agent note — "deploy":** clarify **local** (`npm run dev` → :5195) vs **prod**. Never push without approval.
 
-## Environment map
+## Environment map (verified 2026-08-17)
 
 | Environment | URL | How |
 |-------------|-----|-----|
 | **Dev** | http://localhost:5195/ | `cd site && npm run dev` |
-| **Prod (hosting hoy)** | https://rdebiasec.github.io/lexiatek-website/ | Push `main` → Actions → Pages |
-| **SEO / marca** | https://lexiatek.com (www → apex cuando DNS esté listo) | Canonical/OG ya apuntan aquí |
-| **Intake API** | Render (`lexiatek-intake-api`) | `intake-api/render.yaml` |
+| **Prod sitio (GitHub Pages — aún activo)** | https://rdebiasec.github.io/lexiatek-website/ | Workflow `Site CI and Pages` |
+| **Prod sitio (Render Static — preferido)** | https://lexiatek-site.onrender.com | Auto-deploy desde `main` / `site/` |
+| **SEO / marca** | https://lexiatek.com | DNS/TLS deben apuntar al origen canónico elegido (hoy: roto si apunta mal a Pages) |
+| **Intake API + webchat + WA webhook gates** | https://lexiatek-intake-api.onrender.com | `intake-api/render.yaml` · health `/health` |
 
-## Leads (HubSpot — sin Formspree)
+## Decisión de origen (importante)
 
-1. En HubSpot Starter: crear form con campos alineados (`firstname`, `email`, `phone`, `whatsapp`, `rol_lexiatek`, `resumen_consulta`, `consentimiento_datos`, `fuente`).
-2. Copiar **Portal ID** y **Form GUID**.
-3. Local: `site/.env` → `VITE_HUBSPOT_PORTAL_ID` + `VITE_HUBSPOT_FORM_ID`
-4. GitHub Actions secrets: mismos nombres.
-5. Workflow notify a `ricardo.debiase@dbx-solutions.com`.
+1. **API siempre en Render** (`lexiatek-intake-api`).
+2. **Sitio:** Render Static (`lexiatek-site`) es el destino preferido para unificar prod en Render.
+3. **GitHub Pages** sigue desplegando como fallback hasta que `lexiatek.com` tenga TLS correcto hacia el origen elegido; luego se puede deshabilitar Pages en GitHub Settings.
+4. Cloudflare WAF: ver [`docs/DEFERRED_NEXT_WEEK.md`](../docs/DEFERRED_NEXT_WEEK.md).
 
-Docs form submit API: https://developers.hubspot.com/docs/api-reference/legacy/forms-v3-legacy/guide
+## Leads (HubSpot)
+
+1. HubSpot form + Portal ID / Form GUID.
+2. Local: `site/.env` → `VITE_HUBSPOT_*`
+3. GitHub Actions secrets + Render Static env vars (mismos nombres).
+4. API: `HUBSPOT_ACCESS_TOKEN`, `HUBSPOT_DRY_RUN=false` en Render para leads reales.
+
+Docs: https://developers.hubspot.com/docs/api-reference/legacy/forms-v3-legacy/guide
 
 ## Widget intake (Render)
 
 ```bash
 cd intake-api
-cp .env.example .env   # OPENAI_API_KEY, HUBSPOT_ACCESS_TOKEN, HUBSPOT_DRY_RUN=false
-# Deploy via Render blueprint or dashboard (rootDir: intake-api)
+cp .env.example .env
+# OPENAI_API_KEY, HUBSPOT_ACCESS_TOKEN, USAGE_ADMIN_TOKEN (fuerte)
+# ALLOW_INSECURE_DEFAULTS=true solo en local
 ```
 
-Set secret `VITE_INTAKE_API_URL=https://<servicio>.onrender.com` so Pages habla con Render (CSP se genera en build).
+Set `VITE_INTAKE_API_URL=https://lexiatek-intake-api.onrender.com` en build del sitio.
 
 Checklist CRM: [`intake-api/HUBSPOT_SETUP.md`](../intake-api/HUBSPOT_SETUP.md)
 
-## WhatsApp API (Arquitectura A)
+## WhatsApp (deployment final)
 
-Checklist completo: [`intake-api/WHATSAPP_SETUP.md`](../intake-api/WHATSAPP_SETUP.md)
+Checklist: [`intake-api/WHATSAPP_SETUP.md`](../intake-api/WHATSAPP_SETUP.md)
 
-1. Meta WABA + número Business + BSP (Wati / Respond.io / similar) → sync HubSpot (`fuente=whatsapp`).
-2. **No** WhatsApp nativo HubSpot Professional.
-3. CTA landing: `VITE_WHATSAPP_URL=https://wa.me/57XXXXXXXXXX` en `site/.env` y secret de GitHub Actions → redeploy Pages.
-4. Vacío → botón “WhatsApp (próximamente)” apunta a `#contacto`.
-5. Privacidad 1581/2300: ver sección 0 del checklist; legales ya mencionan el canal.
+- Sprint A: BSP + HubSpot (humano).
+- Gates en API (fase 2 listos en código): `GET/POST /whatsapp` con `hub.verify_token` y `X-Hub-Signature-256` (`META_APP_SECRET`).
+- CTA: `VITE_WHATSAPP_URL=https://wa.me/57XXXXXXXXXX`
 
 ## Dominio lexiatek.com
 
-Cuando DNS esté listo:
+Antes de WAF:
 
-1. Añadir `site/public/CNAME` con `lexiatek.com`
-2. Configurar DNS + redirect `www` → apex
-3. Redeploy (workflow pondrá `VITE_BASE_PATH=/`)
+1. Elegir origen: Render Static **o** GitHub Pages (no ambos sin redirect claro).
+2. Cloudflare DNS → ese origen; SSL mode **Full (strict)**.
+3. Si Pages: `site/public/CNAME` + `VITE_BASE_PATH=/`.
+4. Si Render Static: custom domain en el dashboard del static site.
 
-Hasta entonces el sitio se sirve en github.io; SEO canónico sigue siendo `https://lexiatek.com/`.
+## Security (código)
 
-## Security
-
-- CSP + honeypot + HubSpot Forms API
-- `npm audit --audit-level=high` en CI
+- Rate limit + hard cap tokens + admin Bearer-only + session TTL
+- CSP meta + honeypot + HubSpot Forms
+- `npm audit --audit-level=high` + `pip-audit` en CI
+- Disco Render `/var/data` para `usage.jsonl`
 - Mirror privado: `BACKUP_GITHUB_TOKEN`
-
-## Local
-
-```bash
-cd site && npm install && npm run dev
-# API widget (otra terminal):
-cd intake-api && .venv/bin/uvicorn src.main:app --reload --port 8787
-```

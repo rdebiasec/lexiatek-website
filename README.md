@@ -3,7 +3,8 @@
 Carpeta: `/Users/ricardodebiase/Documents/lexiatek-website`  
 Repo: https://github.com/rdebiasec/lexiatek-website  
 Marca / SEO: **https://lexiatek.com** (www redirige al apex cuando el DNS esté listo)  
-Hosting actual: https://rdebiasec.github.io/lexiatek-website/
+Hosting primario (Render Static): https://lexiatek-site.onrender.com/  
+Hosting legacy (GitHub Pages, hasta migrar DNS): https://rdebiasec.github.io/lexiatek-website/
 
 ## Quick start
 

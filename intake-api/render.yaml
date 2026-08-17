@@ -1,5 +1,6 @@
 # Blueprint Render — LexiaTek intake API
 # https://render.com/docs/blueprint-spec
+# Sitio estático: servicio Render "lexiatek-site" (CDN) — ver site/DEPLOY.md
 
 services:
   - type: web
@@ -12,6 +13,10 @@ services:
     buildCommand: pip install -e .
     startCommand: uvicorn src.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
+    disk:
+      name: lexiatek-usage
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.8"
@@ -24,7 +29,7 @@ services:
       - key: NOTIFY_EMAIL
         value: ricardo.debiase@dbx-solutions.com
       - key: CORS_ORIGINS
-        value: https://rdebiasec.github.io,https://lexiatek.com
+        value: https://rdebiasec.github.io,https://lexiatek.com,https://lexiatek-site.onrender.com
       - key: ALLOW_INSECURE_DEFAULTS
         value: "false"
       - key: OPENAI_TIMEOUT_SECONDS
@@ -39,9 +44,19 @@ services:
         value: "3600"
       - key: AGENT_MAX_TOTAL_TOKENS
         value: "30000"
+      - key: USAGE_STORE_PATH
+        value: /var/data/usage.jsonl
       - key: OPENAI_API_KEY
         sync: false
       - key: HUBSPOT_ACCESS_TOKEN
         sync: false
       - key: USAGE_ADMIN_TOKEN
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        sync: false
+      - key: META_APP_SECRET
+        sync: false
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
         sync: false

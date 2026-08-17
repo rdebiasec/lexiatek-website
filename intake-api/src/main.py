@@ -1,7 +1,8 @@
-"""API FastAPI — widget intake LexiaTek."""
+"""API FastAPI — widget intake LexiaTek + gates WhatsApp."""
 
 from __future__ import annotations
 
+import re
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
@@ -15,6 +16,12 @@ from src.config import get_settings, validate_settings_or_raise
 from src.hubspot_client import dry_run_snapshot
 from src.rate_limit import chat_limiter
 from src.usage_store import summarize_usage
+from src.whatsapp_webhook import router as whatsapp_router
+
+# Solo UUIDs (evita conversation_id arbitrarios / sondeo).
+_UUID_RE = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+)
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -37,7 +44,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="LexiaTek Intake API", version="0.2.0", lifespan=lifespan)
+app = FastAPI(title="LexiaTek Intake API", version="0.3.0", lifespan=lifespan)
 settings = get_settings()
 
 app.add_middleware(SecurityHeadersMiddleware)
@@ -46,8 +53,9 @@ app.add_middleware(
     allow_origins=settings.cors_origin_list,
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "X-Hub-Signature-256"],
 )
+app.include_router(whatsapp_router)
 
 
 class ChatRequest(BaseModel):
@@ -75,9 +83,18 @@ def _client_ip(request: Request) -> str:
     return "unknown"
 
 
+def _resolve_conversation_id(raw: str | None) -> str:
+    cid = (raw or "").strip()
+    if not cid:
+        return str(uuid4())
+    if not _UUID_RE.match(cid):
+        raise HTTPException(status_code=400, detail="conversation_id inválido")
+    return cid
+
+
 @app.get("/health")
 async def health():
-    return {"ok": True, "service": "lexiatek-intake-api", "version": "0.2.0"}
+    return {"ok": True, "service": "lexiatek-intake-api", "version": "0.3.0"}
 
 
 @app.post("/v1/chat", response_model=ChatResponse)
@@ -96,9 +113,7 @@ async def chat(req: ChatRequest, request: Request):
             headers={"Retry-After": "60" if reason == "rate_limit_minute" else "3600"},
         )
 
-    conversation_id = (req.conversation_id or "").strip() or str(uuid4())
-    if len(conversation_id) > 128:
-        raise HTTPException(status_code=400, detail="conversation_id inválido")
+    conversation_id = _resolve_conversation_id(req.conversation_id)
 
     result = await run_intake_turn(
         conversation_id=conversation_id,

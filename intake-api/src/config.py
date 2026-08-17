@@ -54,6 +54,12 @@ class Settings(BaseSettings):
     hubspot_note_max_chars: int = 800
     hubspot_resumen_max_chars: int = 500
 
+    # WhatsApp Cloud API (fase 2 / gates de deployment final)
+    whatsapp_verify_token: str = ""
+    meta_app_secret: str = ""
+    whatsapp_token: str = ""
+    whatsapp_phone_number_id: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

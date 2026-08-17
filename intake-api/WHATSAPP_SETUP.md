@@ -117,11 +117,20 @@ Ya definido en [`HUBSPOT_SETUP.md`](./HUBSPOT_SETUP.md):
 4. Template utility aprobado entrega solo con opt-in / ventana válida.
 5. Ningún secret en frontend salvo `VITE_WHATSAPP_URL` (público por diseño = wa.me).
 
-## 8. Fuera de este checklist (fase 2)
+## 8. Webhook en intake-api (gates listos; agente = fase 2)
 
-- Webhook `GET/POST /whatsapp` en `intake-api`
+Código: `GET/POST /whatsapp` en `intake-api` con:
+
+- [ ] `WHATSAPP_VERIFY_TOKEN` (handshake Meta)
+- [ ] `META_APP_SECRET` → valida `X-Hub-Signature-256`
+- [ ] No loguear texto de mensajes / evidencias (solo conteo de entries)
+
+Fuera aún:
+
 - Agente OpenAI por canal WA (`fuente=whatsapp`)
 - HubSpot Professional WhatsApp nativo (descartado)
+
+Docs firma: https://developers.facebook.com/docs/graph-api/webhooks/getting-started#verification-requests
 
 ## Docs oficiales
 
